@@ -36,8 +36,8 @@
 
 1. Клонируйте репозиторий:
    ```bash
-   git clone <url-репозитория>
-   cd <директория-проекта>
+   git clone https://github.com/gigabait15/WalletFastAPI
+   cd .
    ```
 2. Установите зависимости Python:
     ```bash
