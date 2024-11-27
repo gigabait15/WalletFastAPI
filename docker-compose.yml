@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD:
+      POSTGRES_DB: wallet_operation
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  liquibase:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile.liquibase
+    container_name: liquibase_runner
+    depends_on:
+      - db
+    environment:
+      LIQUIBASE_URL: jdbc:postgresql://db:5432/wallet_operation
+      LIQUIBASE_USERNAME: postgres
+#      LIQUIBASE_PASSWORD:
+      LIQUIBASE_CHANGELOG_FILE: /liquibase/changelog/db.changelog-master.yaml
+    command: update
+
+  app:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres@db:5432/wallet_operation
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app:cached
+
+
+volumes:
+  db_data:

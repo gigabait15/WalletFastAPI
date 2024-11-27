@@ -1,59 +1,59 @@
 import os
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy import create_engine, text
+from sqlalchemy import text, create_engine
 
 
 load_dotenv()
 
 
-DATABASE_URL = f"postgresql+asyncpg"
-
 class Settings(BaseSettings):
     """Класс модели для доступа к переменным окружения"""
-    DB_HOST : str
-    DB_PORT : int
-    DB_NAME : str
-    DB_USER : str
-    DB_PASSWORD : str
+    DB_HOST: str
+    DB_PORT: int
+    DB_NAME: str
+    DB_USER: str
+    DB_PASSWORD: str
     SECRET_KEY: str
-    ALGORITHM: str
 
     model_config = SettingsConfigDict(
-        env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".." ,".env")
+        env_file=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
     )
 
     def create_database(self):
-        """Функция создания БД"""
+        """Функция создания базы данных"""
         if self.DB_PASSWORD is not None:
-            temp_engine = create_engine(f"{DATABASE_URL}://{self.DB_USER}:{self.DB_PASSWORD}"
-                                        f"@{self.DB_HOST}:{self.DB_PORT}", isolation_level='AUTOCOMMIT')
+            full_url = f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}"
         else:
-            temp_engine = create_engine(f"{DATABASE_URL}://{self.DB_USER}"
-                                        f"@{self.DB_HOST}:{self.DB_PORT}", isolation_level='AUTOCOMMIT')
+            full_url = f"postgresql://{self.DB_USER}@{self.DB_HOST}:{self.DB_PORT}"
+
+        temp_engine = create_engine(full_url , isolation_level='AUTOCOMMIT')
 
         with temp_engine.connect() as conn:
             try:
-                conn.execute(text(f"CREATE DATABASE {self.DB_NAME};"))
-                print(f'База данных {self.DB_NAME} успешно создана')
+                result = conn.execute(text(f"SELECT 1 FROM pg_database WHERE datname = '{self.DB_NAME}'"))
+                db_exists = result.scalar()
+
+                if not db_exists:
+                    conn.execute(text(f"CREATE DATABASE {settings.DB_NAME};"))
+                    return True
+                else:
+                    return None
+
             except Exception as e:
                 print(f'Ошибка при создании БД: {e}')
             finally:
                 conn.close()
 
-    def get_db_url(self) -> str:
-        """Функция возвращает ссылку на подключение к БД"""
+    def get_url(self):
+        """
+        Функция для формирования ссылки на БД
+        :return:ссылку на БД
+        """
         if self.DB_PASSWORD is not None:
-            return (f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}"
-                    f":{self.DB_PORT}/{settings.DB_NAME}")
-        return f"postgresql+asyncpg://{self.DB_USER}@{self.DB_HOST}:{self.DB_PORT}/{settings.DB_NAME}"
-
-    def get_auth_data(self) -> dict[str, str]:
-        """Функция возвращает словарь с данными ключа приложения и алгоритма шифрования"""
-        return {'secret_key': self.SECRET_KEY, 'algorithm': self.ALGORITHM}
+            return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return f"postgresql+asyncpg://{self.DB_USER}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
 
-
-# объявление переменной для ображение к экземпляру класса
+# объявление переменной для обращение к экземпляру класса
 settings = Settings()
-

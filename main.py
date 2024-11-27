@@ -1,21 +1,21 @@
-from typing import Union
 from fastapi import FastAPI
+from config import settings
+from database import engine
+from wallet.models import Wallet
+from wallet import routers
 
 app = FastAPI()
 
-wallet = []
+
+@app.on_event("startup")
+async def startup():
+    """
+    Событие запуска приложения. Создает таблицы в базе данных, если их нет.
+    """
+    settings.create_database()
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Wallet.metadata.create_all)
 
 
-@app.get(' api/v1/wallets/{WALLET_UUID}')
-async def read_wallet(WALLET_UUID: str):
-    """Получение данных кошелька"""
-    pass
-
-@app.post(' api/v1/wallets/{WALLET_UUID}/operation')
-async def create_operation(WALLET_UUID: str, operation: str, amount: int):
-    """Операция пополнения или снятия"""
-    if operation == 'DEPOSIT':
-        wallet.append(amount)
-    elif operation == 'WITHDRAW':
-        wallet.remove(amount)
-
+app.include_router(routers.router, prefix="/api/v1")

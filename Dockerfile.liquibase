@@ -1,0 +1,7 @@
+FROM liquibase/liquibase:latest
+
+# Установка PostgreSQL-драйвера
+ADD https://jdbc.postgresql.org/download/postgresql-42.6.0.jar /liquibase/lib/postgresql.jar
+
+# Копирование файлов миграции в контейнер
+COPY ./migrations /liquibase/changelog
